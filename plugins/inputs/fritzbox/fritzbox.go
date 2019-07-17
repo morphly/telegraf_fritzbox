@@ -24,9 +24,9 @@ import (
 	"log"
 	"time"
 
-	upnp "github.com/morphly/fritzbox_exporter/fritzbox_upnp"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	upnp "github.com/morphly/fritzbox_exporter/fritzbox_upnp"
 )
 
 const serviceLoadRetryTime = 1 * time.Minute
@@ -56,7 +56,7 @@ type ComplexMetric struct {
 	ServiceCount int
 	Action       string
 	Result       string
-	Name 		 string
+	Name         string
 	SubAction    string
 	SubResults   SubResult
 }
@@ -113,7 +113,7 @@ var complexMetrics = []*ComplexMetric{
 		Action:       "GetTotalAssociations",
 		Result:       "TotalAssociations",
 		SubAction:    "GetGenericAssociatedDeviceInfo",
-		Name: "fritzbox-wlandevice"
+		Name:         "fritzbox-wlandevice",
 		SubResults: SubResult{
 			Names:   []string{"wlan_device_mac", "wlan_device_ip", "wlan_device_signal", "wlan_device_speed"},
 			Results: []string{"AssociatedDeviceMACAddress", "AssociatedDeviceIPAddress", "X_AVM-DE_SignalStrength", "X_AVM-DE_Speed"},
@@ -171,7 +171,6 @@ func (s *Fritzbox) Gather(acc telegraf.Accumulator) error {
 	var last_method string
 	var result upnp.Result
 	fields := make(map[string]interface{})
-	
 
 	for _, m := range metrics {
 		if m.Service != last_service || m.Action != last_method {
@@ -275,7 +274,6 @@ func (s *Fritzbox) Gather(acc telegraf.Accumulator) error {
 
 		acc.AddFields(m.Name, complexfields, map[string]string{"host": host})
 	}
-	
 
 	return nil
 }
