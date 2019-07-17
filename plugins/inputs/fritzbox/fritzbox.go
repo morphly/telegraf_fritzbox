@@ -45,9 +45,15 @@ type Metric struct {
 	Name    string
 }
 
+// type SubResult struct {
+// 	Names   []string
+// 	Results []string
+// 	Tags    []string
+// }
+
 type SubResult struct {
-	Names   []string
-	Results []string
+	Tags    map[string]string
+	Results map[string]string
 }
 
 //ComplexMetric struct
@@ -113,10 +119,15 @@ var complexMetrics = []*ComplexMetric{
 		Action:       "GetTotalAssociations",
 		Result:       "TotalAssociations",
 		SubAction:    "GetGenericAssociatedDeviceInfo",
-		Name:         "fritzbox-wlandevice",
+		Name:         "fritzbox-wifi",
+		// SubResults: SubResult{
+		// 	Names:   []string{"wlan_device_mac", "wlan_device_ip", "wlan_device_signal", "wlan_device_speed"},
+		// 	Tags:    []string{"wlan_device_mac", "wlan_device_ip"},
+		// 	Results: []string{"AssociatedDeviceMACAddress", "AssociatedDeviceIPAddress", "X_AVM-DE_SignalStrength", "X_AVM-DE_Speed"},
+		// },
 		SubResults: SubResult{
-			Names:   []string{"wlan_device_mac", "wlan_device_ip", "wlan_device_signal", "wlan_device_speed"},
-			Results: []string{"AssociatedDeviceMACAddress", "AssociatedDeviceIPAddress", "X_AVM-DE_SignalStrength", "X_AVM-DE_Speed"},
+			Tags:    map[string]string{"wlan_device_mac": "AssociatedDeviceMACAddress", "wlan_device_ip": "AssociatedDeviceIPAddress"},
+			Results: map[string]string{"wlan_device_signal": "X_AVM-DE_SignalStrength", "wlan_device_speed": "X_AVM-DE_Speed"},
 		},
 	},
 }
@@ -204,6 +215,7 @@ func (s *Fritzbox) Gather(acc telegraf.Accumulator) error {
 
 	for _, m := range complexMetrics {
 		complexfields := make(map[string]interface{})
+		complextags := make(map[string]string)
 		for s := 1; s <= m.ServiceCount; s++ {
 			if m.Service != last_service || m.Action != last_method {
 				servicename := fmt.Sprintf("%s:%v", m.Service, s)
@@ -258,10 +270,22 @@ func (s *Fritzbox) Gather(acc telegraf.Accumulator) error {
 						//collectErrors.Inc()
 
 					}
+					// for _, st := range m.SubResults.Tags {
+					// 	complextags[st] = result[m.SubResults.Results]
+					// }
 
-					for sr := 0; sr <= len(m.SubResults.Names)-1; sr++ {
-						complexfields[m.SubResults.Names[sr]] = result[m.SubResults.Results[sr]]
+					// for sr := 0; sr <= len(m.SubResults.Names)-1; sr++ {
 
+					// 	complexfields[m.SubResults.Names[sr]] = result[m.SubResults.Results[sr]]
+
+					// }
+
+					for name, value := range m.SubResults.Tags {
+						complextags[name] = fmt.Sprint(result[value])
+					}
+
+					for name, value := range m.SubResults.Results {
+						complexfields[name] = result[value]
 					}
 
 				}
@@ -271,8 +295,8 @@ func (s *Fritzbox) Gather(acc telegraf.Accumulator) error {
 		// save service and action
 		last_service = m.Service
 		last_method = m.Action
-
-		acc.AddFields(m.Name, complexfields, map[string]string{"fritzbox": host})
+		complextags["fritzbox"] = host
+		acc.AddFields(m.Name, complexfields, complextags)
 	}
 
 	return nil
