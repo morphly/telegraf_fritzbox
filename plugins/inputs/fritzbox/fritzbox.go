@@ -21,15 +21,21 @@ package fritzbox
 
 import (
 	"fmt"
+	"log"
+	"time"
+
+	upnp "github.com/morphly/fritzbox_exporter/fritzbox_upnp"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	upnp "github.com/ndecker/fritzbox_exporter/fritzbox_upnp"
-	"log"
 )
 
+const serviceLoadRetryTime = 1 * time.Minute
+
 type Fritzbox struct {
-	Host string
-	Port uint16
+	Host     string
+	Username string
+	Password string
+	Port     uint16
 }
 
 type Metric struct {
@@ -37,6 +43,22 @@ type Metric struct {
 	Action  string
 	Result  string
 	Name    string
+}
+
+type SubResult struct {
+	Names   []string
+	Results []string
+}
+
+//ComplexMetric struct
+type ComplexMetric struct {
+	Service      string
+	ServiceCount int
+	Action       string
+	Result       string
+	Name 		 string
+	SubAction    string
+	SubResults   SubResult
 }
 
 var metrics = []*Metric{
@@ -84,6 +106,21 @@ var metrics = []*Metric{
 	},
 }
 
+var complexMetrics = []*ComplexMetric{
+	{
+		Service:      "urn:dslforum-org:service:WLANConfiguration",
+		ServiceCount: 3,
+		Action:       "GetTotalAssociations",
+		Result:       "TotalAssociations",
+		SubAction:    "GetGenericAssociatedDeviceInfo",
+		Name: "fritzbox-wlandevice"
+		SubResults: SubResult{
+			Names:   []string{"wlan_device_mac", "wlan_device_ip", "wlan_device_signal", "wlan_device_speed"},
+			Results: []string{"AssociatedDeviceMACAddress", "AssociatedDeviceIPAddress", "X_AVM-DE_SignalStrength", "X_AVM-DE_Speed"},
+		},
+	},
+}
+
 func (s *Fritzbox) Description() string {
 	return "a demo plugin"
 }
@@ -97,7 +134,10 @@ func (s *Fritzbox) SampleConfig() string {
 }
 
 func (s *Fritzbox) Gather(acc telegraf.Accumulator) error {
+
 	var host string
+	var username string
+	var password string
 	var port uint16
 	if s.Host == "" {
 		host = "fritz.box"
@@ -110,16 +150,28 @@ func (s *Fritzbox) Gather(acc telegraf.Accumulator) error {
 		port = s.Port
 	}
 
-	root, err := upnp.LoadServices(host, port)
+	password = s.Password
+
+	username = s.Username
+	var err error
+
+	root, err := upnp.LoadServices(host, port, username, password)
 	if err != nil {
 		return fmt.Errorf("fritzbox: unable to load services: %v", err)
 	}
 
+	//for s := range root.Services {
+	//	log.Println(s)
+	//log.Println(root.Services[s])
+	//}
+
+	//log.Println(len(root.Services))
 	// remember what we already called
 	var last_service string
 	var last_method string
 	var result upnp.Result
 	fields := make(map[string]interface{})
+	
 
 	for _, m := range metrics {
 		if m.Service != last_service || m.Action != last_method {
@@ -150,6 +202,80 @@ func (s *Fritzbox) Gather(acc telegraf.Accumulator) error {
 		fields[m.Name] = result[m.Result]
 	}
 	acc.AddFields("fritzbox", fields, map[string]string{"host": host})
+
+	for _, m := range complexMetrics {
+		complexfields := make(map[string]interface{})
+		for s := 1; s <= m.ServiceCount; s++ {
+			if m.Service != last_service || m.Action != last_method {
+				servicename := fmt.Sprintf("%s:%v", m.Service, s)
+				service, ok := root.Services[servicename]
+
+				if !ok {
+					log.Println("W! Cannot find defined service %s", servicename)
+					//log.Println(root.Services)
+					continue
+				}
+				action, ok := service.Actions[m.Action]
+				if !ok {
+					// TODO
+					log.Println("W! Cannot find defined action %s on service %s", m.Action)
+					continue
+				}
+
+				result, err = action.Call()
+				if err != nil {
+					log.Println("E! Unable to call action %s on service %s: %v", m.Action, servicename, err)
+					continue
+
+				}
+
+				val, ok := result[m.Result]
+				if !ok {
+					log.Println("result not found", m.Result)
+					continue
+				}
+
+				var floatval int
+				switch tval := val.(type) {
+				case uint64:
+					floatval = int(tval)
+				default:
+					log.Println("unknown", val)
+
+				}
+				for i := 0; i < floatval; i++ {
+					//fmt.Println(i)
+
+					subaction, ok := service.Actions[m.SubAction]
+					if !ok {
+						// TODO
+						log.Println("cannot find subaction", m.SubAction)
+
+					}
+
+					result, err = subaction.CallParam("NewAssociatedDeviceIndex", i)
+					if err != nil {
+						log.Println(err)
+						//collectErrors.Inc()
+
+					}
+
+					for sr := 0; sr <= len(m.SubResults.Names)-1; sr++ {
+						complexfields[m.SubResults.Names[sr]] = result[m.SubResults.Results[sr]]
+
+					}
+
+				}
+
+			}
+		}
+		// save service and action
+		last_service = m.Service
+		last_method = m.Action
+
+		acc.AddFields(m.Name, complexfields, map[string]string{"host": host})
+	}
+	
 
 	return nil
 }
