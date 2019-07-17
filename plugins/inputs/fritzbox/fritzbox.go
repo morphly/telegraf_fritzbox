@@ -200,7 +200,7 @@ func (s *Fritzbox) Gather(acc telegraf.Accumulator) error {
 
 		fields[m.Name] = result[m.Result]
 	}
-	acc.AddFields("fritzbox", fields, map[string]string{"host": host})
+	acc.AddFields("fritzbox", fields, map[string]string{"fritzbox": host})
 
 	for _, m := range complexMetrics {
 		complexfields := make(map[string]interface{})
@@ -272,7 +272,7 @@ func (s *Fritzbox) Gather(acc telegraf.Accumulator) error {
 		last_service = m.Service
 		last_method = m.Action
 
-		acc.AddFields(m.Name, complexfields, map[string]string{"host": host})
+		acc.AddFields(m.Name, complexfields, map[string]string{"fritzbox": host})
 	}
 
 	return nil
