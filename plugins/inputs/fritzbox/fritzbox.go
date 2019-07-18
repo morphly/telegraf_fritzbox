@@ -280,7 +280,6 @@ func (s *Fritzbox) Gather(acc telegraf.Accumulator) error {
 		last_service = m.Service
 		last_method = m.Action
 
-		acc.AddFields(m.Name, complexfields, complextags)
 	}
 
 	return nil
