@@ -203,14 +203,12 @@ func (s *Fritzbox) Gather(acc telegraf.Accumulator) error {
 	acc.AddFields("fritzbox", fields, map[string]string{"fritzbox": host})
 
 	for _, m := range complexMetrics {
-		complexfields := make(map[string]interface{})
-		complextags := make(map[string]string)
+
 		for s := 1; s <= m.ServiceCount; s++ {
 			if m.Service != last_service || m.Action != last_method {
 				servicename := fmt.Sprintf("%s:%v", m.Service, s)
 				service, ok := root.Services[servicename]
-				complextags["service"] = fmt.Sprint(s)
-				log.Println(servicename)
+
 				if !ok {
 					log.Println("W! Cannot find defined service %s", servicename)
 					//log.Println(root.Services)
@@ -245,7 +243,6 @@ func (s *Fritzbox) Gather(acc telegraf.Accumulator) error {
 
 				}
 				for i := 0; i < floatval; i++ {
-					fmt.Println(i)
 
 					subaction, ok := service.Actions[m.SubAction]
 					if !ok {
@@ -260,6 +257,11 @@ func (s *Fritzbox) Gather(acc telegraf.Accumulator) error {
 
 					}
 
+					complexfields := make(map[string]interface{})
+					complextags := make(map[string]string)
+					complextags["service"] = fmt.Sprint(s)
+					complextags["fritzbox"] = host
+
 					for name, value := range m.SubResults.Tags {
 						complextags[name] = fmt.Sprint(result[value])
 					}
@@ -268,6 +270,8 @@ func (s *Fritzbox) Gather(acc telegraf.Accumulator) error {
 						complexfields[name] = result[value]
 					}
 
+					acc.AddFields(m.Name, complexfields, complextags)
+
 				}
 
 			}
@@ -275,7 +279,7 @@ func (s *Fritzbox) Gather(acc telegraf.Accumulator) error {
 		// save service and action
 		last_service = m.Service
 		last_method = m.Action
-		complextags["fritzbox"] = host
+
 		acc.AddFields(m.Name, complexfields, complextags)
 	}
 
