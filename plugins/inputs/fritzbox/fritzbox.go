@@ -31,6 +31,7 @@ import (
 
 const serviceLoadRetryTime = 1 * time.Minute
 
+//Fritzbox struct
 type Fritzbox struct {
 	Host     string
 	Username string
@@ -38,6 +39,7 @@ type Fritzbox struct {
 	Port     uint16
 }
 
+//Metric struct
 type Metric struct {
 	Service string
 	Action  string
@@ -45,6 +47,7 @@ type Metric struct {
 	Name    string
 }
 
+//SubResult struct
 type SubResult struct {
 	Tags    map[string]string
 	Results map[string]string
@@ -121,10 +124,12 @@ var complexMetrics = []*ComplexMetric{
 	},
 }
 
+//Description of the plugin
 func (s *Fritzbox) Description() string {
-	return "a demo plugin"
+	return "A Plugin for collecting data from AVM Fritz devices supporting TR-064"
 }
 
+//SampleConfig covering minimal run values
 func (s *Fritzbox) SampleConfig() string {
 	return `
   ## Host and Port for FRITZ!Box UPnP service
@@ -133,6 +138,7 @@ func (s *Fritzbox) SampleConfig() string {
 `
 }
 
+//Gather routine which is triggered by telegraf
 func (s *Fritzbox) Gather(acc telegraf.Accumulator) error {
 
 	var host string
@@ -167,35 +173,35 @@ func (s *Fritzbox) Gather(acc telegraf.Accumulator) error {
 
 	//log.Println(len(root.Services))
 	// remember what we already called
-	var last_service string
-	var last_method string
+	var lastService string
+	var lastMethod string
 	var result upnp.Result
 	fields := make(map[string]interface{})
 
 	for _, m := range metrics {
-		if m.Service != last_service || m.Action != last_method {
+		if m.Service != lastService || m.Action != lastMethod {
 			service, ok := root.Services[m.Service]
 			if !ok {
 				// TODO
-				log.Println("W! Cannot find defined service %s", m.Service)
+				log.Printf("W! Cannot find defined service %s\n", m.Service)
 				continue
 			}
 			action, ok := service.Actions[m.Action]
 			if !ok {
 				// TODO
-				log.Println("W! Cannot find defined action %s on service %s", m.Action)
+				log.Printf("W! Cannot find defined action %s on service %s\n", m.Action, m.Service)
 				continue
 			}
 
 			result, err = action.Call()
 			if err != nil {
-				log.Println("E! Unable to call action %s on service %s: %v", m.Action, m.Service, err)
+				log.Printf("E! Unable to call action %s on service %s: %v\n", m.Action, m.Service, err)
 				continue
 			}
 
 			// save service and action
-			last_service = m.Service
-			last_method = m.Action
+			lastService = m.Service
+			lastMethod = m.Action
 		}
 
 		fields[m.Name] = result[m.Result]
@@ -205,25 +211,25 @@ func (s *Fritzbox) Gather(acc telegraf.Accumulator) error {
 	for _, m := range complexMetrics {
 
 		for s := 1; s <= m.ServiceCount; s++ {
-			if m.Service != last_service || m.Action != last_method {
+			if m.Service != lastService || m.Action != lastMethod {
 				servicename := fmt.Sprintf("%s:%v", m.Service, s)
 				service, ok := root.Services[servicename]
 
 				if !ok {
-					log.Println("W! Cannot find defined service %s", servicename)
+					log.Printf("W! Cannot find defined service %s\n", servicename)
 					//log.Println(root.Services)
 					continue
 				}
 				action, ok := service.Actions[m.Action]
 				if !ok {
 					// TODO
-					log.Println("W! Cannot find defined action %s on service %s", m.Action)
+					log.Printf("W! Cannot find defined action %s on service %s\n", m.Action, m.Service)
 					continue
 				}
 
 				result, err = action.Call()
 				if err != nil {
-					log.Println("E! Unable to call action %s on service %s: %v", m.Action, servicename, err)
+					log.Printf("E! Unable to call action %s on service %s: %v\n", m.Action, servicename, err)
 					continue
 
 				}
@@ -277,8 +283,8 @@ func (s *Fritzbox) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 		// save service and action
-		last_service = m.Service
-		last_method = m.Action
+		lastService = m.Service
+		lastMethod = m.Action
 
 	}
 
