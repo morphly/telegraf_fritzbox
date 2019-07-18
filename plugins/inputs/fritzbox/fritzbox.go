@@ -45,12 +45,6 @@ type Metric struct {
 	Name    string
 }
 
-// type SubResult struct {
-// 	Names   []string
-// 	Results []string
-// 	Tags    []string
-// }
-
 type SubResult struct {
 	Tags    map[string]string
 	Results map[string]string
@@ -120,11 +114,6 @@ var complexMetrics = []*ComplexMetric{
 		Result:       "TotalAssociations",
 		SubAction:    "GetGenericAssociatedDeviceInfo",
 		Name:         "fritzbox-wifi",
-		// SubResults: SubResult{
-		// 	Names:   []string{"wlan_device_mac", "wlan_device_ip", "wlan_device_signal", "wlan_device_speed"},
-		// 	Tags:    []string{"wlan_device_mac", "wlan_device_ip"},
-		// 	Results: []string{"AssociatedDeviceMACAddress", "AssociatedDeviceIPAddress", "X_AVM-DE_SignalStrength", "X_AVM-DE_Speed"},
-		// },
 		SubResults: SubResult{
 			Tags:    map[string]string{"wlan_device_mac": "AssociatedDeviceMACAddress", "wlan_device_ip": "AssociatedDeviceIPAddress"},
 			Results: map[string]string{"wlan_device_signal": "X_AVM-DE_SignalStrength", "wlan_device_speed": "X_AVM-DE_Speed"},
@@ -268,18 +257,8 @@ func (s *Fritzbox) Gather(acc telegraf.Accumulator) error {
 					result, err = subaction.CallParam("NewAssociatedDeviceIndex", i)
 					if err != nil {
 						log.Println(err)
-						//collectErrors.Inc()
 
 					}
-					// for _, st := range m.SubResults.Tags {
-					// 	complextags[st] = result[m.SubResults.Results]
-					// }
-
-					// for sr := 0; sr <= len(m.SubResults.Names)-1; sr++ {
-
-					// 	complexfields[m.SubResults.Names[sr]] = result[m.SubResults.Results[sr]]
-
-					// }
 
 					for name, value := range m.SubResults.Tags {
 						complextags[name] = fmt.Sprint(result[value])
