@@ -25,4 +25,5 @@ devices/repeaters and FRITZ!OS versions 7.02+.
 
 ## Status
 
-Works for me. Contributions welcome.
+Works for me. Contributions welcome. Performance may become an issues with
+multiple devices
