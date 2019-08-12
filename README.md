@@ -7,7 +7,9 @@ This is a **very** quick and dirty attempt at enabling
 the popular FRITZ!Box routers/repeaters made by manufacturer AVM. These devices export
 basic statistcis using UPnP (i.e. SOAP on port 49000) when configured to do so
 ("Heimnetz > Netzwerk > Netzwerkeinstellungen > Statusinformationen über UPnP
-übertragen").
+übertragen"). 
+This fork specifically focuses on gathering data from devices connected to Wifi like
+signal strength and speed.
 
 The code borrows heavily from 123Haynes fork of Nils Decker's excellent
 [fritzbox\_exporter](https://github.com/123Haynes/fritzbox_exporter).
