@@ -184,8 +184,8 @@ func (s *Fritzbox) Gather(acc telegraf.Accumulator) error {
 		if m.Service != lastService || m.Action != lastMethod {
 			service, ok := root.Services[m.Service]
 			if !ok {
-				// TODO
-				log.Printf("W! Cannot find defined service %s\n", m.Service)
+				// Causes too many messages on non-FritzBoxes
+				//log.Printf("W! Cannot find defined service %s\n", m.Service)
 				continue
 			}
 			action, ok := service.Actions[m.Action]
@@ -218,7 +218,8 @@ func (s *Fritzbox) Gather(acc telegraf.Accumulator) error {
 				service, ok := root.Services[servicename]
 
 				if !ok {
-					log.Printf("W! Cannot find defined service %s\n", servicename)
+					// Causes too many messages on non-FritzBoxes
+					//log.Printf("W! Cannot find defined service %s\n", servicename)
 					//log.Println(root.Services)
 					continue
 				}
