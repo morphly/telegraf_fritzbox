@@ -61,6 +61,7 @@ type ComplexMetric struct {
 	Result       string
 	Name         string
 	SubAction    string
+	SubActionArg string
 	SubResults   SubResult
 }
 
@@ -116,6 +117,7 @@ var complexMetrics = []*ComplexMetric{
 		Action:       "GetTotalAssociations",
 		Result:       "TotalAssociations",
 		SubAction:    "GetGenericAssociatedDeviceInfo",
+		SubActionArg: "NewAssociatedDeviceIndex",
 		Name:         "fritzbox-wifi",
 		SubResults: SubResult{
 			Tags:    map[string]string{"wlan_device_mac": "AssociatedDeviceMACAddress", "wlan_device_ip": "AssociatedDeviceIPAddress"},
@@ -257,7 +259,7 @@ func (s *Fritzbox) Gather(acc telegraf.Accumulator) error {
 
 					}
 
-					result, err = subaction.CallParam("NewAssociatedDeviceIndex", i)
+					result, err = subaction.CallParam(m.SubActionArg, i)
 					if err != nil {
 						log.Println(err)
 
